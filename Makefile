@@ -8,31 +8,41 @@ LINK=emcc
 EXEEXT=.js
 DLLEXT=.so
 CFLAGS_BASED_ON_INIT_FILE= 
-CFLAGS=$(CFLAGS_BASED_ON_INIT_FILE) ${SIM_OR_DYNLOAD_OPT_LEVEL} -fPIC ${MODELICAUSERCFLAGS} 
-CPPFLAGS=-I"/usr/include/omc" -I. -L"/usr/lib/omlibrary/Modelica 3.2.1/Electrical/Analog/Examples"  -DOPENMODELICA_XML_FROM_FILE_AT_RUNTIME
-LDFLAGS= -L"./" -O2 -lexpat -lSimulationRuntimeC -lf2c -s TOTAL_MEMORY=536870912 -s MAX_SETJMPS=20000 -s OUTLINING_LIMIT=20000
+CFLAGS=$(CFLAGS_BASED_ON_INIT_FILE) -fPIC ${MODELICAUSERCFLAGS}  
+CPPFLAGS=-I"/usr/include/omc" -I"./Hemodynamics" -I.  -DOPENMODELICA_XML_FROM_FILE_AT_RUNTIME
+LDFLAGS=-L"./" -L"./Hemodynamics" -O2 -lSimulationRuntimeC -lexpat -lf2c -s TOTAL_MEMORY=536870912 -s MAX_SETJMPS=20000 -s OUTLINING_LIMIT=20000
 PERL=perl
-FILEPREFIX=Modelica.Electrical.Analog.Examples.ChuaCircuit
-MAINFILE=$(FILEPREFIX).c
-MAINOBJ=$(FILEPREFIX).o
-GENERATEDFILES=$(MAINFILE) $(FILEPREFIX)_functions.c main.c $(FILEPREFIX)_functions.h $(FILEPREFIX)_records.c $(FILEPREFIX).makefile
+FILEPREFIX=Hemodynamics/HeamodynamicsDymola.Models.HaedynamicsBurkhoffModel
+MAINFILE=${FILEPREFIX}.c
+MAINOBJ=${FILEPREFIX}.o
+CFILES=${FILEPREFIX}_functions.c ${FILEPREFIX}_records.c \
+${FILEPREFIX}_01exo.c ${FILEPREFIX}_02nls.c ${FILEPREFIX}_03lsy.c ${FILEPREFIX}_04set.c ${FILEPREFIX}_05evt.c ${FILEPREFIX}_06inz.c ${FILEPREFIX}_07dly.c \
+${FILEPREFIX}_08bnd.c ${FILEPREFIX}_09alg.c ${FILEPREFIX}_10asr.c ${FILEPREFIX}_11mix.c ${FILEPREFIX}_12jac.c ${FILEPREFIX}_13opt.c ${FILEPREFIX}_14lnz.c
+OFILES=$(CFILES:.c=.o)
+GENERATEDFILES=$(MAINFILE) ${FILEPREFIX}.makefile ${FILEPREFIX}_literals.h ${FILEPREFIX}_functions.h $(CFILES)
 
-# .PHONY: omc_main_target clean bundle
+#.PHONY: omc_main_target clean bundle
 
-# This is to make sure that Modelica.Electrical.Analog.Examples.ChuaCircuit_records.c is always compiled.
-# .PHONY: $(FILEPREFIX)_records.c
+# This is to make sure that ${FILEPREFIX}_*.c are always compiled.
+#.PHONY: $(CFILES)
+
+#main_module: $(MAINOBJ) $(FILEPREFIX)_records.o $(FILEPREFIX)_functions.c $(FILEPREFIX)_functions.h
+#	$(CXX) -I. -o main_mod.js $(MAINOBJ) $(FILEPREFIX)_records.o $(CPPFLAGS) -L"/usr/lib/omlibrary/Modelica 3.2.1/Electrical/Analog/#Examples"   $(CFLAGS) $(LDFLAGS)
+
+omc_main_target: $(MAINOBJ) ${FILEPREFIX}_functions.h ${FILEPREFIX}_literals.h $(OFILES)
+	$(CC) -I. -o ${FILEPREFIX}$(EXEEXT) $(MAINOBJ) $(OFILES) $(CPPFLAGS) -L"./Hemodynamics"   $(CFLAGS) $(LDFLAGS)
 
 main_module: $(MAINOBJ) $(FILEPREFIX)_records.o $(FILEPREFIX)_functions.c $(FILEPREFIX)_functions.h
-	$(CXX) -I. -o main_mod.js $(MAINOBJ) $(FILEPREFIX)_records.o $(CPPFLAGS) -L"/usr/lib/omlibrary/Modelica 3.2.1/Electrical/Analog/Examples"   $(CFLAGS) $(LDFLAGS)
+	$(CXX) -I. -o main_mod.js $(MAINOBJ) $(FILEPREFIX)_records.o $(CPPFLAGS) -L"./Hemodynamics"   $(CFLAGS) $(LDFLAGS)
 
-Modelica.Electrical.Analog.Examples.ChuaCircuit.conv.c: $(FILEPREFIX).c
+${FILEPREFIX}.conv.c: $(FILEPREFIX).c
 	$(PERL) /usr/share/omc/scripts/convert_lines.pl $< $@.tmp
 	@mv $@.tmp $@
 	$(PERL) /usr/share/omc/scripts/convert_lines.pl $(FILEPREFIX)_functions.c $@.tmp
 	@mv $@.tmp $(FILEPREFIX)_functions.c
 
 clean:
-	@rm -f $(FILEPREFIX)_records.o $(MAINOBJ)
+	@rm -f ${FILEPREFIX}_records.o $(MAINOBJ)
 
 bundle:
-	@tar -cvf $(FILEPREFIX)_Files.tar $(GENERATEDFILES)
+	@tar -cvf ${FILEPREFIX}_Files.tar $(GENERATEDFILES)
